@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ender's Realm | Server Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #09090b;
+            color: #f4f4f5;
+        }
+
+        /* Removing numeric spinners for the port input */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(39, 39, 42, 0.8);
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="selection:bg-emerald-500/30 overflow-x-hidden min-h-screen">
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-8 shadow-2xl animate-fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Server Login</h2>
+                <button onclick="closeModal('loginModal')" class="text-zinc-500 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <p class="text-zinc-400 text-sm mb-6">Enter your name. Log in as <span class="text-emerald-400 font-bold">Your name </span> to see and manage name server and port.</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Your Name</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4"></i>
+                        <input id="loginInput" type="text" placeholder="e.g. Your name " class="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all">
+                    </div>
+                </div>
+                <button onclick="handleLoginSubmit()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all shadow-lg active:scale-95">
+                    Sign In
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+        <div class="glass-panel w-full max-w-lg rounded-2xl p-8 shadow-2xl animate-fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-2 text-blue-400">
+                    <i data-lucide="info" class="w-6 h-6"></i>
+                    <h2 class="text-xl font-bold text-white">About This Web</h2>
+                </div>
+                <button onclick="closeModal('aboutModal')" class="text-zinc-500 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="space-y-6 text-zinc-300 text-sm leading-relaxed">
+                <p>This is a high-performance <span class="text-emerald-400 font-bold">Minecraft Server Management Dashboard</span>. It provides real-time control and monitoring for dedicated instances.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800">
+                        <h4 class="text-emerald-400 font-bold mb-2 flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4"></i> Owner Security</h4>
+                        <p class="text-xs text-zinc-500">Only authorized owners can access the Live Console and modify core server configuration.</p>
+                    </div>
+                    <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-800">
+                        <h4 class="text-blue-400 font-bold mb-2 flex items-center gap-2"><i data-lucide="globe" class="w-4 h-4"></i> 24/7 Hosting</h4>
+                        <p class="text-xs text-zinc-500">Designed for persistent servers with high-availability infrastructure and uptime monitoring.</p>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-zinc-800 text-[10px] text-zinc-500 italic">Version 1.2.0 • Optimized for all screen sizes</div>
+            </div>
+            <button onclick="closeModal('aboutModal')" class="w-full mt-8 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all">Close</button>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 py-6 md:py-10">
+        <header class="flex flex-col xl:flex-row xl:items-center justify-between mb-8 gap-6 border-b border-zinc-800/50 pb-6">
+            <div class="flex items-center gap-4">
+                <div id="statusIconBox" class="p-3 rounded-2xl shrink-0 bg-emerald-500/10 text-emerald-400 border border-emerald-400/20">
+                    <i data-lucide="server" class="w-8 h-8"></i>
+                </div>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 id="headerServerName" class="text-2xl font-bold tracking-tight">Ender's Realm</h1>
+                        <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                            <i data-lucide="refresh-cw" class="w-2.5 h-2.5 animate-spin"></i> 24/7 Online
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2 text-zinc-400 text-sm mt-1">
+                        <span id="statusIndicator" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="statusText">Running</span> • IP: play.mcsrv.io:<span id="headerPort" class="font-mono cursor-pointer hover:text-emerald-400 transition-colors" onclick="copyValue('25565', 'Port')">25565</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <button onclick="openModal('aboutModal')" class="flex items-center justify-center w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors" title="About">
+                    <i data-lucide="info" class="w-5 h-5"></i>
+                </button>
+
+                <div id="authSection" class="flex items-center"></div>
+            </div>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <div class="glass-panel p-5 rounded-2xl group transition-all hover:border-zinc-700">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="p-2 bg-zinc-950 rounded-lg text-blue-400 group-hover:scale-110 transition-transform"><i data-lucide="users" class="w-4 h-4"></i></div>
+                    <span class="text-zinc-500 text-[10px] font-semibold uppercase tracking-wider">Players</span>
+                </div>
+                <div id="playerCount" class="text-2xl font-bold">12/50</div>
+            </div>
+            <div class="glass-panel p-5 rounded-2xl group transition-all hover:border-zinc-700">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="p-2 bg-zinc-950 rounded-lg text-purple-400 group-hover:scale-110 transition-transform"><i data-lucide="globe" class="w-4 h-4"></i></div>
+                    <span class="text-zinc-500 text-[10px] font-semibold uppercase tracking-wider">Availability</span>
+                </div>
+                <div class="text-2xl font-bold">24/7 Active</div>
+            </div>
+            <div class="glass-panel p-5 rounded-2xl group transition-all hover:border-zinc-700">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="p-2 bg-zinc-950 rounded-lg text-orange-400 group-hover:scale-110 transition-transform"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+                    <span class="text-zinc-500 text-[10px] font-semibold uppercase tracking-wider">Version</span>
+                </div>
+                <div class="text-2xl font-bold">1.20.4 Paper</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <section class="lg:col-span-1">
+                <div id="configPanel" class="glass-panel rounded-2xl p-6 transition-all duration-300 h-full">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-2">
+                            <i id="configIcon" data-lucide="settings" class="w-5 h-5 text-zinc-400"></i>
+                            <h2 class="font-semibold text-sm">Configuration</h2>
+                        </div>
+                        <div id="lockBadge"></div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">Server Name</label>
+                            <input id="serverNameInput" type="text" value="Ender's Realm" oninput="updateServerName(this.value)" readonly class="w-full bg-zinc-950 border border-zinc-800 text-sm rounded-lg px-4 py-2.5 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5">Port Number</label>
+                            <div class="relative">
+                                <input id="serverPortInput" type="number" value="25565" oninput="updateServerPort(this.value)" readonly class="w-full bg-zinc-950 border border-zinc-800 text-sm rounded-lg px-4 py-2.5 outline-none transition-all pr-12">
+                                <button onclick="copyValue(document.getElementById('serverPortInput').value, 'Port')" class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-500 hover:text-emerald-400 transition-colors">
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 pt-6 border-t border-zinc-800/50">
+                        <div class="flex items-center gap-2 text-zinc-500 mb-4">
+                            <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                            <span class="text-xs font-bold uppercase">Uptime Info</span>
+                        </div>
+                        <div class="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/50">
+                            <p class="text-[10px] text-zinc-500 leading-relaxed">Server is currently running on high-performance node #MC-042. Redundant network routes enabled for 24/7 connectivity.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lg:col-span-2 min-h-[500px]" id="consoleContainer">
+                <!-- Content dynamically injected via renderConsole() -->
+            </section>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 bg-zinc-900 border border-emerald-500/50 text-emerald-400 rounded-full shadow-2xl transition-all opacity-0 translate-y-10 pointer-events-none z-[100] flex items-center gap-3">
+        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+        <span id="toastMsg" class="font-bold text-sm">Action Successful</span>
+    </div>
+
+    <script>
+        let state = {
+            isLoggedIn: false,
+            userName: 'Guest',
+            isOwner: false,
+            isOnline: true,
+            serverName: "Ender's Realm",
+            serverPort: "25565",
+            playerCount: 12,
+            maxPlayers: 50,
+            logs: [
+                { id: 1, time: '12:00:01', type: 'INFO', msg: 'Starting Minecraft server version 1.20.4' },
+                { id: 2, time: '12:00:05', type: 'INFO', msg: 'Loading properties...' },
+                { id: 3, time: '12:01:12', type: 'JOIN', msg: 'Player "Steve" joined the game' }
+            ],
+            editingId: null
+        };
+
+        function init() {
+            lucide.createIcons();
+            renderAuth();
+            renderConsole();
+            renderConfig();
+            updateServerStatusUI();
+        }
+
+        // Modals
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            if (id === 'loginModal') document.getElementById('loginInput').focus();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Auth Logic
+        function handleLoginSubmit() {
+            const val = document.getElementById('loginInput').value.trim();
+            if (!val) return;
+
+            state.isLoggedIn = true;
+            state.userName = val;
+            state.isOwner = val.toLowerCase() === 'mengheng';
+            
+            addLog('INFO', `User "${val}" logged in.`);
+            closeModal('loginModal');
+            renderAuth();
+            renderConsole();
+            renderConfig();
+            showToast(`Logged in as ${val}`);
+        }
+
+        function handleLogout() {
+            addLog('INFO', `User "${state.userName}" logged out.`);
+            state.isLoggedIn = false;
+            state.userName = 'Guest';
+            state.isOwner = false;
+            
+            renderAuth();
+            renderConsole();
+            renderConfig();
+            showToast("Logged out successfully");
+        }
+
+        function renderAuth() {
+            const section = document.getElementById('authSection');
+            if (state.isLoggedIn) {
+                section.innerHTML = `
+                    <div class="flex items-center gap-3 bg-zinc-900/50 p-1 pr-4 rounded-full border ${state.isOwner ? 'border-emerald-500/50 shadow-[0_0_15px_-5px_rgba(16,185,129,0.3)]' : 'border-zinc-800'} animate-fade-in">
+                        <div class="w-8 h-8 rounded-full shrink-0 ${state.isOwner ? 'bg-emerald-500 text-zinc-950' : 'bg-zinc-800 text-zinc-400'} flex items-center justify-center uppercase font-bold text-xs relative">
+                            ${state.userName.charAt(0)}
+                            ${state.isOwner ? '<i data-lucide="crown" class="w-2.5 h-2.5 absolute -top-1 -right-1 text-yellow-500 fill-yellow-500"></i>' : ''}
+                        </div>
+                        <div class="flex flex-col min-w-0">
+                            <span class="text-sm font-bold leading-none truncate">${state.userName}</span>
+                            ${state.isOwner ? '<span class="text-[10px] text-emerald-400 font-medium uppercase tracking-wide mt-0.5">Owner</span>' : ''}
+                        </div>
+                        <button onclick="handleLogout()" class="p-1.5 text-zinc-500 hover:text-red-400 transition-colors ml-2"><i data-lucide="log-out" class="w-4 h-4"></i></button>
+                    </div>
+                `;
+            } else {
+                section.innerHTML = `
+                    <button onclick="openModal('loginModal')" class="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-500 transition-all shadow-lg active:scale-95">
+                        <i data-lucide="log-in" class="w-4 h-4"></i> Login
+                    </button>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function renderConsole() {
+            const container = document.getElementById('consoleContainer');
+            
+            if (!state.isOwner) {
+                // RESTRICTED VIEW FOR REGULAR USERS
+                container.innerHTML = `
+                    <div class="bg-zinc-900/30 border border-dashed border-zinc-800 rounded-2xl flex flex-col h-full items-center justify-center p-8 md:p-12 text-center animate-fade-in">
+                        <div class="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-6 border border-zinc-800 shadow-xl shrink-0">
+                            <i data-lucide="eye-off" class="w-8 h-8 text-zinc-700"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-zinc-100 mb-2">Live Console Locked</h3>
+                        <p class="text-sm text-zinc-500 max-w-xs mx-auto mb-8">
+                            Only the server owner (<span class="text-emerald-500 font-medium">Owner</span>) has permission to view live logs and execute commands.
+                        </p>
+                        ${!state.isLoggedIn ? `
+                            <button onclick="openModal('loginModal')" class="px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-semibold transition-all border border-zinc-700 shadow-lg active:scale-95">
+                                Login as Owner
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                // FULL CONSOLE ACCESS FOR OWNER
+                container.innerHTML = `
+                    <div class="glass-panel rounded-2xl flex flex-col h-full overflow-hidden animate-fade-in">
+                        <div class="p-4 border-b border-zinc-800 bg-zinc-900/80 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="terminal" class="w-4.5 h-4.5 text-emerald-400"></i>
+                                <h2 class="font-semibold text-sm">Live Console</h2>
+                                <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20 font-bold uppercase">Owner Access</span>
+                            </div>
+                            <button onclick="clearLogs()" class="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-400 px-3 py-1.5 rounded transition-colors">Clear</button>
+                        </div>
+                        
+                        <div id="logList" class="p-4 font-mono text-xs overflow-y-auto flex-1 space-y-2 max-h-[400px] custom-scrollbar"></div>
+
+                        <div class="p-4 border-t border-zinc-800 bg-zinc-950/50">
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-mono">></span>
+                                <input id="commandInput" type="text" placeholder="Enter server command..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-8 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 font-mono text-sm" onkeydown="handleCommand(event)">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                renderLogs();
+            }
+            lucide.createIcons();
+        }
+
+        function renderLogs() {
+            const list = document.getElementById('logList');
+            if (!list) return;
+
+            list.innerHTML = state.logs.map(log => {
+                const colorClass = log.type === 'INFO' ? 'text-blue-400' : (log.type === 'WARN' ? 'text-yellow-500' : (log.type === 'JOIN' ? 'text-emerald-400' : 'text-red-400'));
+                
+                if (state.editingId === log.id) {
+                    return `
+                        <div class="flex gap-3 bg-zinc-800/50 ring-1 ring-emerald-500/30 p-1.5 rounded items-center">
+                            <span class="text-zinc-600 shrink-0">[${log.time}]</span>
+                            <span class="font-bold ${colorClass} shrink-0">[${log.type}]</span>
+                            <input id="editInput" value="${log.msg}" class="flex-1 bg-zinc-950 border border-emerald-500/50 rounded px-2 py-0.5 outline-none text-zinc-100" onkeydown="handleEditKey(event, ${log.id})">
+                            <button onclick="saveEdit(${log.id})" class="text-emerald-400 hover:text-emerald-300"><i data-lucide="save" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="cancelEdit()" class="text-zinc-500"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="flex gap-3 group relative hover:bg-zinc-800/30 p-1.5 rounded transition-colors">
+                        <span class="text-zinc-600 shrink-0">[${log.time}]</span>
+                        <span class="font-bold whitespace-nowrap shrink-0 ${colorClass}">[${log.type}]</span>
+                        <span class="text-zinc-300 break-all pr-16">${log.msg}</span>
+                        <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <button onclick="startEdit(${log.id}, '${log.msg.replace(/'/g, "\\'")}')" class="text-zinc-500 hover:text-emerald-400 p-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="deleteLog(${log.id})" class="text-zinc-500 hover:text-red-400 p-1"><i data-lucide="zap" class="w-3.5 h-3.5 rotate-45"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+            list.scrollTop = list.scrollHeight;
+        }
+
+        // Log Management
+        function addLog(type, msg) {
+            const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+            state.logs.push({ id: Date.now(), time, type, msg });
+            if (state.isOwner) renderLogs();
+        }
+
+        function clearLogs() {
+            state.logs = [];
+            renderLogs();
+            showToast("Console Cleared");
+        }
+
+        function deleteLog(id) {
+            state.logs = state.logs.filter(l => l.id !== id);
+            renderLogs();
+        }
+
+        function startEdit(id, msg) {
+            state.editingId = id;
+            renderLogs();
+            setTimeout(() => document.getElementById('editInput').focus(), 50);
+        }
+
+        function saveEdit(id) {
+            const val = document.getElementById('editInput').value;
+            state.logs = state.logs.map(l => l.id === id ? { ...l, msg: val } : l);
+            state.editingId = null;
+            renderLogs();
+        }
+
+        function cancelEdit() {
+            state.editingId = null;
+            renderLogs();
+        }
+
+        function handleEditKey(e, id) {
+            if (e.key === 'Enter') saveEdit(id);
+            if (e.key === 'Escape') cancelEdit();
+        }
+
+        function handleCommand(e) {
+            if (e.key === 'Enter' && e.target.value.trim()) {
+                if (!state.isOnline) {
+                    addLog('ERROR', 'Cannot execute command while server is offline.');
+                } else {
+                    addLog('INFO', `[${state.userName}] Executing: ${e.target.value}`);
+                }
+                e.target.value = '';
+            }
+        }
+
+        // Configuration Panel UI
+        function renderConfig() {
+            const nameInput = document.getElementById('serverNameInput');
+            const portInput = document.getElementById('serverPortInput');
+            const lockBadge = document.getElementById('lockBadge');
+            const configIcon = document.getElementById('configIcon');
+            const panel = document.getElementById('configPanel');
+
+            if (state.isOwner) {
+                nameInput.readOnly = false;
+                nameInput.className = "w-full bg-zinc-950 border border-zinc-800 text-sm rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all text-zinc-100";
+                portInput.readOnly = false;
+                portInput.className = "w-full bg-zinc-950 border border-zinc-800 text-sm rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all text-zinc-100 pr-12";
+                lockBadge.innerHTML = `<span class="flex items-center gap-1.5 text-[10px] text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/10 px-2 py-1 rounded"><i data-lucide="unlock" class="w-2.5 h-2.5"></i> Editable</span>`;
+                configIcon.classList.add('text-emerald-400');
+                panel.classList.add('border-emerald-500/50');
+            } else {
+                nameInput.readOnly = true;
+                nameInput.className = "w-full bg-zinc-950/50 border border-zinc-800 text-sm rounded-lg px-4 py-2.5 outline-none transition-all text-zinc-500 cursor-default";
+                portInput.readOnly = true;
+                portInput.className = "w-full bg-zinc-950/50 border border-zinc-800 text-sm rounded-lg px-4 py-2.5 outline-none transition-all text-zinc-500 cursor-default pr-12";
+                lockBadge.innerHTML = `<span class="flex items-center gap-1.5 text-[10px] text-zinc-500 font-bold uppercase tracking-wider bg-zinc-950 px-2 py-1 rounded"><i data-lucide="lock" class="w-2.5 h-2.5"></i> Locked</span>`;
+                configIcon.classList.remove('text-emerald-400');
+                panel.classList.remove('border-emerald-500/50');
+            }
+            lucide.createIcons();
+        }
+
+        // Server Status UI
+        function toggleServer() {
+            state.isOnline = !state.isOnline;
+            addLog(state.isOnline ? 'INFO' : 'WARN', `Server ${state.isOnline ? 'started' : 'stopped'} by ${state.userName}.`);
+            if (!state.isOnline) state.playerCount = 0;
+            else state.playerCount = 12;
+            
+            updateServerStatusUI();
+            document.getElementById('playerCount').innerText = `${state.playerCount}/${state.maxPlayers}`;
+            showToast(state.isOnline ? "Server Starting..." : "Server Stopping...");
+        }
+
+        function updateServerStatusUI() {
+            const iconBox = document.getElementById('statusIconBox');
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+
+            if (state.isOnline) {
+                iconBox.className = "p-3 rounded-2xl shrink-0 bg-emerald-500/10 text-emerald-400 border border-emerald-400/20";
+                indicator.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                statusText.innerText = "Running";
+            } else {
+                iconBox.className = "p-3 rounded-2xl shrink-0 bg-red-500/10 text-red-400 border border-red-500/20";
+                indicator.className = "w-2 h-2 rounded-full bg-red-500";
+                statusText.innerText = "Offline";
+            }
+        }
+
+        function updateServerName(val) {
+            state.serverName = val;
+            document.getElementById('headerServerName').innerText = val;
+        }
+
+        function updateServerPort(val) {
+            state.serverPort = val;
+            document.getElementById('headerPort').innerText = val;
+        }
+
+        // Utilities
+        function copyValue(val, label) {
+            const el = document.createElement('textarea');
+            el.value = val;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            showToast(`${label} Copied!`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.innerText = msg;
+            toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+            }, 2500);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
